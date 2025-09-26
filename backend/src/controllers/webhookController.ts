@@ -372,7 +372,15 @@ export class WebhookController {
       where: {
         OR: [
           { repositories: { some: { id: repo.id } } },
-          { organizations: { some: { repositories: { some: { id: repo.id } } } } }
+          {
+            organizations: {
+              some: {
+                organization: {
+                  repositories: { some: { id: repo.id } }
+                }
+              }
+            }
+          }
         ]
       }
     });

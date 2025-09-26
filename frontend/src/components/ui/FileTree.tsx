@@ -48,4 +48,65 @@ function FileTreeNode({ node, level, onFileSelect }: FileTreeNodeProps) {
         onClick={handleClick}
         className={`flex items-center py-1 px-2 cursor-pointer rounded transition-colors`}
         style={{ paddingLeft: `${level * 16 + 8}px` }}
-      >\n        {node.type === 'folder' && (\n          <motion.div\n            animate={{ rotate: isExpanded ? 90 : 0 }}\n            transition={{ duration: 0.2 }}\n            className=\"mr-1\"\n          >\n            <ChevronRightIcon className=\"w-4 h-4 text-muted-foreground\" />\n          </motion.div>\n        )}\n        \n        {node.type === 'folder' ? (\n          isExpanded ? (\n            <FolderOpenIcon className=\"w-4 h-4 mr-2 text-blue-500\" />\n          ) : (\n            <FolderIcon className=\"w-4 h-4 mr-2 text-blue-500\" />\n          )\n        ) : (\n          <DocumentIcon className=\"w-4 h-4 mr-2 text-muted-foreground ml-5\" />\n        )}\n        \n        <span className=\"text-sm select-none\">{node.name}</span>\n      </motion.div>\n\n      <AnimatePresence>\n        {isExpanded && hasChildren && (\n          <motion.div\n            initial={{ height: 0, opacity: 0 }}\n            animate={{ height: 'auto', opacity: 1 }}\n            exit={{ height: 0, opacity: 0 }}\n            transition={{ duration: 0.2 }}\n            className=\"overflow-hidden\"\n          >\n            {node.children!.map((child, index) => (\n              <FileTreeNode\n                key={`${child.path}-${index}`}\n                node={child}\n                level={level + 1}\n                onFileSelect={onFileSelect}\n              />\n            ))}\n          </motion.div>\n        )}\n      </AnimatePresence>\n    </div>\n  );\n}\n\nexport function FileTree({ data, onFileSelect }: FileTreeProps) {\n  return (\n    <div className=\"py-2\">\n      {data.map((node, index) => (\n        <FileTreeNode\n          key={`${node.path}-${index}`}\n          node={node}\n          level={0}\n          onFileSelect={onFileSelect}\n        />\n      ))}\n    </div>\n  );\n}"}
+      >
+        {node.type === 'folder' && (
+          <motion.div
+            animate={{ rotate: isExpanded ? 90 : 0 }}
+            transition={{ duration: 0.2 }}
+            className="mr-1"
+          >
+            <ChevronRightIcon className="w-4 h-4 text-muted-foreground" />
+          </motion.div>
+        )}
+
+        {node.type === 'folder' ? (
+          isExpanded ? (
+            <FolderOpenIcon className="w-4 h-4 mr-2 text-blue-500" />
+          ) : (
+            <FolderIcon className="w-4 h-4 mr-2 text-blue-500" />
+          )
+        ) : (
+          <DocumentIcon className="w-4 h-4 mr-2 text-muted-foreground ml-5" />
+        )}
+
+        <span className="text-sm select-none">{node.name}</span>
+      </motion.div>
+
+      <AnimatePresence>
+        {isExpanded && hasChildren && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            {node.children!.map((child, index) => (
+              <FileTreeNode
+                key={`${child.path}-${index}`}
+                node={child}
+                level={level + 1}
+                onFileSelect={onFileSelect}
+              />
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+export function FileTree({ data, onFileSelect }: FileTreeProps) {
+  return (
+    <div className="py-2">
+      {data.map((node, index) => (
+        <FileTreeNode
+          key={`${node.path}-${index}`}
+          node={node}
+          level={0}
+          onFileSelect={onFileSelect}
+        />
+      ))}
+    </div>
+  );
+}
