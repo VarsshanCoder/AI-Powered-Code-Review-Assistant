@@ -11,8 +11,6 @@ import { ReviewDetail } from './pages/ReviewDetail';
 import { Settings } from './pages/Settings';
 import { Collaboration } from './pages/Collaboration';
 import { Gamification } from './pages/Gamification';
-import { Collaboration } from './pages/Collaboration';
-import { Gamification } from './pages/Gamification';
 import './index.css';
 
 const queryClient = new QueryClient({

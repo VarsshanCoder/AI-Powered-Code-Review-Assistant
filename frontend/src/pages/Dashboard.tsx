@@ -14,6 +14,7 @@ import { AnimatedCard } from '../components/ui/AnimatedCard';
 import { AnimatedProgress } from '../components/ui/AnimatedProgress';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
+import { Card } from '../components/ui/Card';
 
 const stats = [
   {
@@ -221,6 +222,6 @@ export function Dashboard() {
           </div>
         </Card>
       </div>
-    </div>
+    </motion.div>
   );
 }
