@@ -1,0 +1,458 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  username  String   @unique
+  password  String
+  firstName String?
+  lastName  String?
+  avatar    String?
+  role      UserRole @default(DEVELOPER)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationships
+  organizations       OrganizationMember[]
+  repositories        Repository[]
+  reviews            Review[]
+  comments           Comment[]
+  reviewSessions     ReviewSession[]
+  notifications      Notification[]
+  customRules        CustomRule[]
+  achievements       UserAchievement[]
+  activityLogs       ActivityLog[]
+
+  @@map("users")
+}
+
+model Organization {
+  id          String   @id @default(uuid())
+  name        String
+  slug        String   @unique
+  description String?
+  avatar      String?
+  isActive    Boolean  @default(true)
+  settings    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relationships
+  members      OrganizationMember[]
+  repositories Repository[]
+  customRules  CustomRule[]
+  integrations Integration[]
+
+  @@map("organizations")
+}
+
+model OrganizationMember {
+  id             String         @id @default(uuid())
+  userId         String
+  organizationId String
+  role           OrgMemberRole  @default(MEMBER)
+  joinedAt       DateTime       @default(now())
+
+  // Relationships
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, organizationId])
+  @@map("organization_members")
+}
+
+model Repository {
+  id             String     @id @default(uuid())
+  name           String
+  fullName       String     @unique
+  description    String?
+  language       String?
+  isPrivate      Boolean    @default(false)
+  defaultBranch  String     @default("main")
+  cloneUrl       String
+  htmlUrl        String
+  provider       GitProvider
+  providerId     String
+  ownerId        String
+  organizationId String?
+  settings       Json?
+  isActive       Boolean    @default(true)
+  lastSyncAt     DateTime?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  // Relationships
+  owner        User          @relation(fields: [ownerId], references: [id])
+  organization Organization? @relation(fields: [organizationId], references: [id])
+  reviews      Review[]
+  pullRequests PullRequest[]
+  commits      Commit[]
+  files        File[]
+  integrations Integration[]
+
+  @@map("repositories")
+}
+
+model PullRequest {
+  id           String    @id @default(uuid())
+  repositoryId String
+  number       Int
+  title        String
+  description  String?
+  state        PRState   @default(OPEN)
+  authorId     String?
+  headBranch   String
+  baseBranch   String
+  providerId   String
+  htmlUrl      String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  mergedAt     DateTime?
+  closedAt     DateTime?
+
+  // Relationships
+  repository Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  reviews    Review[]
+  commits    Commit[]
+
+  @@unique([repositoryId, number])
+  @@map("pull_requests")
+}
+
+model Commit {
+  id           String   @id @default(uuid())
+  repositoryId String
+  sha          String   @unique
+  message      String
+  authorName   String
+  authorEmail  String
+  authorDate   DateTime
+  providerId   String
+  htmlUrl      String
+  pullRequestId String?
+  createdAt    DateTime @default(now())
+
+  // Relationships
+  repository  Repository   @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  pullRequest PullRequest? @relation(fields: [pullRequestId], references: [id])
+  reviews     Review[]
+
+  @@map("commits")
+}
+
+model File {
+  id           String   @id @default(uuid())
+  repositoryId String
+  path         String
+  filename     String
+  extension    String?
+  language     String?
+  size         Int?
+  content      String?
+  sha          String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relationships
+  repository Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  reviews    Review[]
+  comments   Comment[]
+
+  @@unique([repositoryId, path])
+  @@map("files")
+}
+
+model Review {
+  id             String      @id @default(uuid())
+  repositoryId   String
+  fileId         String?
+  pullRequestId  String?
+  commitId       String?
+  reviewerId     String
+  type           ReviewType  @default(AUTOMATED)
+  status         ReviewStatus @default(PENDING)
+  score          Float?
+  summary        String?
+  findings       Json?
+  suggestions    Json?
+  aiModel        String?
+  processingTime Int?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  // Relationships
+  repository  Repository   @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  file        File?        @relation(fields: [fileId], references: [id])
+  pullRequest PullRequest? @relation(fields: [pullRequestId], references: [id])
+  commit      Commit?      @relation(fields: [commitId], references: [id])
+  reviewer    User         @relation(fields: [reviewerId], references: [id])
+  comments    Comment[]
+
+  @@map("reviews")
+}
+
+model Comment {
+  id        String      @id @default(uuid())
+  reviewId  String
+  fileId    String?
+  authorId  String
+  content   String
+  lineStart Int?
+  lineEnd   Int?
+  type      CommentType @default(SUGGESTION)
+  severity  Severity    @default(INFO)
+  isResolved Boolean    @default(false)
+  parentId  String?
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  // Relationships
+  review   Review    @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  file     File?     @relation(fields: [fileId], references: [id])
+  author   User      @relation(fields: [authorId], references: [id])
+  parent   Comment?  @relation("CommentReplies", fields: [parentId], references: [id])
+  replies  Comment[] @relation("CommentReplies")
+
+  @@map("comments")
+}
+
+model ReviewSession {
+  id           String    @id @default(uuid())
+  name         String
+  description  String?
+  repositoryId String
+  createdById  String
+  isActive     Boolean   @default(true)
+  startedAt    DateTime  @default(now())
+  endedAt      DateTime?
+
+  // Relationships
+  createdBy    User @relation(fields: [createdById], references: [id])
+  participants ReviewSessionParticipant[]
+
+  @@map("review_sessions")
+}
+
+model ReviewSessionParticipant {
+  id              String   @id @default(uuid())
+  sessionId       String
+  userId          String
+  role            SessionRole @default(PARTICIPANT)
+  joinedAt        DateTime @default(now())
+  leftAt          DateTime?
+
+  // Relationships
+  session ReviewSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user    User          @relation(fields: [userId], references: [id])
+
+  @@unique([sessionId, userId])
+  @@map("review_session_participants")
+}
+
+model CustomRule {
+  id             String   @id @default(uuid())
+  name           String
+  description    String?
+  pattern        String
+  severity       Severity @default(WARNING)
+  message        String
+  autoFix        String?
+  isEnabled      Boolean  @default(true)
+  language       String?
+  createdById    String
+  organizationId String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relationships
+  createdBy    User          @relation(fields: [createdById], references: [id])
+  organization Organization? @relation(fields: [organizationId], references: [id])
+
+  @@map("custom_rules")
+}
+
+model Integration {
+  id             String          @id @default(uuid())
+  type           IntegrationType
+  name           String
+  settings       Json
+  isEnabled      Boolean         @default(true)
+  repositoryId   String?
+  organizationId String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  // Relationships
+  repository   Repository?   @relation(fields: [repositoryId], references: [id])
+  organization Organization? @relation(fields: [organizationId], references: [id])
+
+  @@map("integrations")
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  type      NotificationType
+  title     String
+  message   String
+  data      Json?
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  // Relationships
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+model Achievement {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String
+  icon        String
+  category    String
+  points      Int      @default(0)
+  criteria    Json
+  createdAt   DateTime @default(now())
+
+  // Relationships
+  userAchievements UserAchievement[]
+
+  @@map("achievements")
+}
+
+model UserAchievement {
+  id            String   @id @default(uuid())
+  userId        String
+  achievementId String
+  unlockedAt    DateTime @default(now())
+  progress      Json?
+
+  // Relationships
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement Achievement @relation(fields: [achievementId], references: [id])
+
+  @@unique([userId, achievementId])
+  @@map("user_achievements")
+}
+
+model ActivityLog {
+  id        String       @id @default(uuid())
+  userId    String
+  action    ActivityType
+  resource  String
+  resourceId String?
+  metadata  Json?
+  createdAt DateTime     @default(now())
+
+  // Relationships
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("activity_logs")
+}
+
+// Enums
+enum UserRole {
+  ADMIN
+  DEVELOPER
+  REVIEWER
+  VIEWER
+}
+
+enum OrgMemberRole {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+enum GitProvider {
+  GITHUB
+  GITLAB
+  BITBUCKET
+}
+
+enum PRState {
+  OPEN
+  CLOSED
+  MERGED
+  DRAFT
+}
+
+enum ReviewType {
+  AUTOMATED
+  MANUAL
+  HYBRID
+}
+
+enum ReviewStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+}
+
+enum CommentType {
+  BUG
+  IMPROVEMENT
+  SUGGESTION
+  QUESTION
+  PRAISE
+  SECURITY
+  PERFORMANCE
+}
+
+enum Severity {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+  INFO
+}
+
+enum SessionRole {
+  HOST
+  PARTICIPANT
+  OBSERVER
+}
+
+enum IntegrationType {
+  SLACK
+  TEAMS
+  EMAIL
+  WEBHOOK
+  GITHUB_APP
+  GITLAB_APP
+  BITBUCKET_APP
+}
+
+enum NotificationType {
+  REVIEW_COMPLETED
+  COMMENT_ADDED
+  PR_READY
+  ACHIEVEMENT_UNLOCKED
+  INTEGRATION_FAILED
+  SYSTEM_ALERT
+}
+
+enum ActivityType {
+  LOGIN
+  LOGOUT
+  REVIEW_CREATED
+  REVIEW_COMPLETED
+  COMMENT_ADDED
+  REPOSITORY_CONNECTED
+  RULE_CREATED
+  INTEGRATION_ENABLED
+}
