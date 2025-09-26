@@ -1,0 +1,16 @@
+node_modules/
+.dist/
+.build/
+.next/
+coverage/
+.env
+.env.*
+*.log
+.DS_Store
+.vscode/.history
+.idea/
+.tmp/
+**/dist/
+**/build/
+**/.turbo/
+**/.cache/
